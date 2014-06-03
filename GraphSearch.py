@@ -7,19 +7,22 @@ import Queue
 import math
 
 # Dictionary containing a node as a key and a list of [node, cost] as the value
-__graph = {}
+_graph = {}
 # Dictionary containing a node and its position
-__node_pos = {}
+_node_pos = {}
 # Flag for the type of nodes (has cost/has position)
-__have_cost = -1
+_have_cost = -1
 
 
 def load_graph(file_name):
-    if __graph:
-        __graph.clear()
-    file = open(file_name)
-    data = file.read()
+    if _graph:
+        _graph.clear()
+    global _have_cost
+    _have_cost = -1
+    graph = open(file_name)
+    data = graph.read()
     parse_data(data)
+    graph.close()
 
 
 # ---------------- #
@@ -28,13 +31,13 @@ def load_graph(file_name):
 
 
 def dfs(start, end):
-    if not __graph:
+    if not _graph:
         raise GraphError("No graph has been loaded")
     return dfs_helper(start, end, [])
 
 
 def bfs(start, end):
-    if not __graph:
+    if not _graph:
         raise GraphError("No graph has been loaded")
     closed_list = []
     open_queue = Queue.Queue()
@@ -49,7 +52,7 @@ def bfs(start, end):
             print closed_list
             closed_list.append([next_node, prev_node])
             return make_path(end, closed_list)
-        edges = __graph[next_node]
+        edges = _graph[next_node]
         for edge in edges:
             if edge[0] == end:
                 print "Edge"
@@ -65,7 +68,7 @@ def bfs(start, end):
 
 
 def ucs(start, end):
-    if not __graph:
+    if not _graph:
         raise GraphError("No graph has been loaded")
     closed_list = []
     open_queue = Queue.PriorityQueue()
@@ -78,7 +81,7 @@ def ucs(start, end):
         if next_node[1] == end:
             closed_list.append([next_node, prev_node])
             return make_path(end, closed_list)
-        edges = __graph[next_node]
+        edges = _graph[next_node]
         for edge in edges:
             if edge[0] == end:
                 closed_list.append([edge[0], next_node])
@@ -92,9 +95,9 @@ def ucs(start, end):
 
 
 def gbfs(start, end):
-    if not __graph:
+    if not _graph:
         raise GraphError("No graph has been loaded")
-    if __have_cost:
+    if _have_cost:
         raise SearchError("Nodes must have positions instead of cost for gbfs")
     closed_list = []
     open_queue = Queue.PriorityQueue()
@@ -111,7 +114,7 @@ def gbfs(start, end):
             closed_list.append([next_node, prev_node])
         if next_node == end:
             return make_path(end, closed_list)
-        successors = __graph[next_node]
+        successors = _graph[next_node]
         for edge in successors:
             if not closed_list_contains(edge[0], closed_list):
                 h = get_h_cost(edge[0])
@@ -131,7 +134,7 @@ def dfs_helper(node, goal, path):
     if node == goal:
         return [node]
     try:
-        children = __graph[node]
+        children = _graph[node]
         # Note: child is of the form [node, cost]
         for child in children:
             path = dfs_helper(child[0], goal, path)
@@ -175,10 +178,10 @@ def get_total_cost(node, closed_list):
     cost = 0
     prev_node = get_next(node, closed_list)
     while prev_node is not None:
-        options = __graph[prev_node]
+        options = _graph[prev_node]
         for opt in options:
             if opt[0] == node:
-                if __have_cost:
+                if _have_cost:
                     cost += opt[1]
                 else:
                     cost += get_distance(prev_node, opt[0])
@@ -191,8 +194,8 @@ def get_h_cost(node, goal):
 
 
 def get_distance(node1, node2):
-    pos1 = __node_pos[node1]
-    pos2 = __node_pos[node2]
+    pos1 = _node_pos[node1]
+    pos2 = _node_pos[node2]
     return math.sqrt(((pos1[0] - pos2[0]) ** 2) + ((pos1[1] - pos2[1]) ** 2))
 
 
@@ -202,7 +205,7 @@ def get_distance(node1, node2):
 
 
 def parse_data(graph_data):
-    global __have_cost
+    global _have_cost
     # tokenize it
     tokens = graph_data.split('\n')
     for tok in tokens:
@@ -223,13 +226,17 @@ def parse_data(graph_data):
         else:
             raise NodeParseError("Connections must be '<->', '->', or '<-'")
 
+        # print tok
         link = tok.split(split_by)
         nd = link[0]
         node_con = link[1].split(':')
         if len(node_con) == 2:
-            if __have_cost == -1:
-                __have_cost = 1
-            if not __have_cost:
+            if _have_cost == -1:
+                _have_cost = 1
+                # print("set have_cost to %d", _have_cost)
+                # print link
+                # print node_con
+            if not _have_cost:
                 raise NodeParseError("Nodes must all be of the same type")
             try:
                 cost = int(node_con[1])
@@ -237,21 +244,23 @@ def parse_data(graph_data):
                 cost = float(node_con[1])
 
             if connection != 0:
-                if nd in __graph:
+                if nd in _graph:
                     # append [Node, Cost] to the list of connected nodes
-                    __graph[nd] += [[node_con[0], cost]]
+                    _graph[nd] += [[node_con[0], cost]]
                 else:
-                    __graph[nd] = [[node_con[0], cost]]
+                    _graph[nd] = [[node_con[0], cost]]
             if connection != 1:
-                if node_con[0] in __graph:
-                    __graph[node_con[0]] += [[nd, cost]]
+                if node_con[0] in _graph:
+                    _graph[node_con[0]] += [[nd, cost]]
                 else:
-                    __graph[node_con[0]] = [[nd, cost]]
+                    _graph[node_con[0]] = [[nd, cost]]
         # Nodes have a position
         elif len(node_con) == 3:
-            if __have_cost:
-                if __have_cost == -1:
-                    __have_cost = 0
+            # print tok
+            # print node_con
+            if _have_cost:
+                if _have_cost == -1:
+                    _have_cost = 0
                 else:
                     raise NodeParseError("Nodes must be of the same type")
             try:
@@ -262,23 +271,24 @@ def parse_data(graph_data):
                 y = float(node_con[2])
 
             if connection != 0:
-                if nd in __graph:
-                    __graph[nd] += [[node_con[0], x, y]]
+                if nd in _graph:
+                    _graph[nd] += [[node_con[0], x, y]]
                 else:
-                    __graph[nd] = [[node_con[0], x, y]]
-                if nd in __node_pos:
+                    _graph[nd] = [[node_con[0], x, y]]
+                if nd in _node_pos and _node_pos[nd] == [x, y]:
                     raise NodeParseError("Nodes must have only one position")
                 else:
-                    __node_pos[nd] = [x, y]
+                    _node_pos[nd] = [x, y]
             if connection != 1:
-                if node_con[0] in __graph:
-                    __graph[node_con[0]] += [[nd, x, y]]
+                if node_con[0] in _graph:
+                    _graph[node_con[0]] += [[nd, x, y]]
                 else:
-                    __graph[node_con[0]] = [[nd, x, y]]
-                if node_con[0] in __node_pos:
+                    _graph[node_con[0]] = [[nd, x, y]]
+                if node_con[0] in _node_pos and \
+                        _node_pos[node_con[0]] == [x, y]:
                     raise NodeParseError("Nodes must have only one position")
                 else:
-                    __node_pos[node_con[0]] = [x, y]
+                    _node_pos[node_con[0]] = [x, y]
 
 
 # ------------- #
