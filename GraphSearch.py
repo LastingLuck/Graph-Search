@@ -243,10 +243,26 @@ def parse_data(graph_data):
 
         # print tok
         link = tok.split(split_by)
+        if connection == -1:
+            pos = re.split(':|\(|\,|\)', link[1])
+            if pos[len(pos)-1] == '':
+                pos.pop()
+            try:
+                x = int(pos[0])
+                y = int(pos[1])
+            except ValueError:
+                x = float(pos[0])
+                y = float(pos[1])
+            if (link[0] in _node_pos) and (_node_pos[link[0]] != [x, y]):
+                raise NodeParseError("Nodes must have only one postition")
+            else:
+                _node_pos[link[0]] = [x, y]
+            continue
         # TODO - Figure out a better way to match node(x,y) pattern
         if matches_format(link[0]):
-            temp = re.split('\(|\,|\)', link[0])
-            temp.pop()
+            temp = re.split(':|\(|\,|\)', link[0])
+            if temp[len(temp)-1] == '':
+                temp.pop()
             link[0] = temp[0]
             try:
                 x = int(temp[1])
