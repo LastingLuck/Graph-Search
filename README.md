@@ -24,7 +24,7 @@ Node1/2 are replaced with whatever you wish to name your nodes.
 If you want the links between nodes to have a cost, then <cost/position> is replaced with any number (int or float).
 
 
-If you want each node to have a position, then <cost/position> is replaced with 2 numbers (int or float) in the format 'x:y'
+If you want each node to have a position, then <cost/position> is replaced with 2 numbers (int or float) in the format 'x:y'. New format allows for using (x,y) instead and allows for using (x,y) next to the left node.
 
     * As of now, any node that does not have a node connecting to it will have a position 0,0
 
