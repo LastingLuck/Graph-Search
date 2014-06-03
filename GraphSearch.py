@@ -1,3 +1,12 @@
+# Line Format:
+#     Node1<connection>Node2:Cost
+#     Can remove cost and put (x,y) instead
+#     Can do that for both sides. E.g. Node1(x,y)<conn.>Node2(x,y)
+#     Node position can be done before or after node links
+#       Node1=(x,y)       Node1->Node2
+#       Node2=(a,b)   ==  Node1=(x,y)   ==   Node1(x,y)->Node2(a,b)
+#       Node1->Node2      Node2=(a,b)
+
 # TODO - Implement uc_search, greedy_bfs, and a_star
 # TODO - test load_graph, dfs, and bfs
 # TODO - Update load_graph so it populates node_pos
@@ -5,6 +14,7 @@
 
 import Queue
 import math
+import re
 
 # Dictionary containing a node as a key and a list of [node, cost] as the value
 _graph = {}
@@ -17,6 +27,8 @@ _have_cost = -1
 def load_graph(file_name):
     if _graph:
         _graph.clear()
+    if _node_pos:
+        _node_pos.clear()
     global _have_cost
     _have_cost = -1
     graph = open(file_name)
@@ -223,13 +235,33 @@ def parse_data(graph_data):
         elif '<-' in tok:
             connection = 0
             split_by = '<-'
+        elif '=' in tok:
+            connection = -1
+            split_by = '='
         else:
-            raise NodeParseError("Connections must be '<->', '->', or '<-'")
+            raise NodeParseError("Connections must be '<->', '->', '<-', '='")
 
         # print tok
         link = tok.split(split_by)
+        # TODO - Figure out a better way to match node(x,y) pattern
+        if matches_format(link[0]):
+            temp = re.split('\(|\,|\)', link[0])
+            temp.pop()
+            link[0] = temp[0]
+            try:
+                x = int(temp[1])
+                y = int(temp[2])
+            except ValueError:
+                x = float(temp[1])
+                y = float(temp[2])
+            if temp[0] in _node_pos and _node_pos[temp[0]] != [x, y]:
+                raise NodeParseError("Nodes must have only one position")
+            else:
+                _node_pos[temp[0]] = [x, y]
         nd = link[0]
-        node_con = link[1].split(':')
+        node_con = re.split(':|\(|\,|\)', link[1])
+        if node_con[len(node_con)-1] == '':
+            node_con.pop()
         if len(node_con) == 2:
             if _have_cost == -1:
                 _have_cost = 1
@@ -275,21 +307,40 @@ def parse_data(graph_data):
                     _graph[nd] += [[node_con[0], x, y]]
                 else:
                     _graph[nd] = [[node_con[0], x, y]]
-                if nd in _node_pos and _node_pos[nd] == [x, y]:
+                if (node_con[0] in _node_pos) and \
+                        (_node_pos[node_con[0]] != [x, y]):
+                    # print _node_pos[node_con[0]]
+                    # print [x, y]
                     raise NodeParseError("Nodes must have only one position")
                 else:
-                    _node_pos[nd] = [x, y]
+                    _node_pos[node_con[0]] = [x, y]
             if connection != 1:
                 if node_con[0] in _graph:
                     _graph[node_con[0]] += [[nd, x, y]]
                 else:
                     _graph[node_con[0]] = [[nd, x, y]]
-                if node_con[0] in _node_pos and \
-                        _node_pos[node_con[0]] == [x, y]:
+                if nd in _node_pos and _node_pos[nd] != [x, y]:
                     raise NodeParseError("Nodes must have only one position")
                 else:
-                    _node_pos[node_con[0]] = [x, y]
+                    _node_pos[nd] = [x, y]
 
+
+def matches_format(string):
+    flag = 0
+    for i in range(len(string)):
+        if string[i] == '(' and flag == 0:
+            flag = 1
+        elif string[i] == '(' and flag != 0:
+            return False
+        if string[i] == ',' and flag == 1:
+            flag = 2
+        elif string[i] == ',' and flag != 1:
+            return False
+        if string[i] == ')' and flag == 2:
+            return True
+        elif string[i] == ',' and flag != 2:
+            return False
+    return False
 
 # ------------- #
 # Custom Errors #
