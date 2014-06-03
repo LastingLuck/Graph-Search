@@ -247,7 +247,10 @@ def parse_data(graph_data):
             pos = re.split(':|\(|\,|\)', link[1])
             if pos[len(pos)-1] == '':
                 pos.pop()
+            if pos[0] == '':
+                pos.pop(0)
             try:
+                # print pos
                 x = int(pos[0])
                 y = int(pos[1])
             except ValueError:
@@ -278,6 +281,22 @@ def parse_data(graph_data):
         node_con = re.split(':|\(|\,|\)', link[1])
         if node_con[len(node_con)-1] == '':
             node_con.pop()
+        if len(node_con) == 1:
+            if _have_cost:
+                if _have_cost == -1:
+                    _have_cost = 0
+                else:
+                    raise NodeParseError("Nodes must all be of the same type")
+            if connection != 0:
+                if nd in _graph:
+                    _graph[nd] += [[node_con[0]]]
+                else:
+                    _graph[nd] = [[node_con[0]]]
+            if connection != 1:
+                if node_con[0] in _graph:
+                    _graph[node_con[0]] += [[nd]]
+                else:
+                    _graph[node_con[0]] = [[nd]]
         if len(node_con) == 2:
             if _have_cost == -1:
                 _have_cost = 1
