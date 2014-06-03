@@ -132,6 +132,10 @@ class TestGraph(unittest.TestCase):
         self.test_pos['E'] = [4, 4]
         self.assertEqual(cmp(self.test_graph, GraphSearch._graph), 0)
 
+    def test_graph12(self):
+        with self.assertRaises(GraphSearch.NodeParseError):
+            GraphSearch.load_graph(self.graph_dir + "graph12.txt")
+
 
 if __name__ == '__main__':
     unittest.main()

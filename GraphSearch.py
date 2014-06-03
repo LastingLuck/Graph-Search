@@ -7,9 +7,8 @@
 #       Node2=(a,b)   ==  Node1=(x,y)   ==   Node1(x,y)->Node2(a,b)
 #       Node1->Node2      Node2=(a,b)
 
-# TODO - Implement uc_search, greedy_bfs, and a_star
-# TODO - test load_graph, dfs, and bfs
-# TODO - Update load_graph so it populates node_pos
+# TODO - Implement, gbfs and a_star
+# TODO - test load_graph, dfs, bfs, and usc
 
 
 import Queue
@@ -17,6 +16,7 @@ import math
 import re
 
 # Dictionary containing a node as a key and a list of [node, cost] as the value
+# If nodes have a position the graph will contain [node, x, y] or [node]
 _graph = {}
 # Dictionary containing a node and its position
 _node_pos = {}
@@ -25,6 +25,9 @@ _have_cost = -1
 
 
 def load_graph(file_name):
+    '''
+    Loads a graph from the file specified
+    '''
     if _graph:
         _graph.clear()
     if _node_pos:
@@ -43,12 +46,18 @@ def load_graph(file_name):
 
 
 def dfs(start, end):
+    '''
+    Performs a depth-first search on the currently loaded graph.
+    '''
     if not _graph:
         raise GraphError("No graph has been loaded")
-    return dfs_helper(start, end, [])
+    return _dfs_helper(start, end, [])
 
 
 def bfs(start, end):
+    '''
+    Performs a breadth-first search on the currently loaded graph.
+    '''
     if not _graph:
         raise GraphError("No graph has been loaded")
     closed_list = []
@@ -63,15 +72,15 @@ def bfs(start, end):
             print "Node"
             print closed_list
             closed_list.append([next_node, prev_node])
-            return make_path(end, closed_list)
+            return _make_path(end, closed_list)
         edges = _graph[next_node]
         for edge in edges:
             if edge[0] == end:
                 print "Edge"
                 print closed_list
                 closed_list.append([edge[0], next_node])
-                return make_path(end, closed_list)
-            if not closed_list_contains(edge[0], closed_list):
+                return _make_path(end, closed_list)
+            if not _closed_list_contains(edge[0], closed_list):
                 closed_list.append([edge[0], next_node])
                 open_queue.put(edge[0])
         prev_node = next_node
@@ -80,6 +89,9 @@ def bfs(start, end):
 
 
 def ucs(start, end):
+    '''
+    Preforms a uniform cost search on the currently loaded graph
+    '''
     if not _graph:
         raise GraphError("No graph has been loaded")
     closed_list = []
@@ -92,21 +104,26 @@ def ucs(start, end):
         next_node = open_queue.get()
         if next_node[1] == end:
             closed_list.append([next_node, prev_node])
-            return make_path(end, closed_list)
+            return _make_path(end, closed_list)
         edges = _graph[next_node]
         for edge in edges:
             if edge[0] == end:
                 closed_list.append([edge[0], next_node])
-                return make_path(end, closed_list)
-            if not closed_list_contains(edge[0], closed_list):
+                return _make_path(end, closed_list)
+            if not _closed_list_contains(edge[0], closed_list):
                 closed_list.append([edge[0], next_node])
-                total_cost = get_total_cost(edge[0], closed_list)
+                total_cost = _get_total_cost(edge[0], closed_list)
                 open_queue.put((total_cost, edge[0]))
         prev_node = next_node
     return []
 
 
 def gbfs(start, end):
+    '''
+    Performs a greedy best first search on the currently loaded graph.
+    The straight-line distance is used for the heuristic value.
+    Loaded graph must have positions associated with the nodes and not weights
+    '''
     if not _graph:
         raise GraphError("No graph has been loaded")
     if _have_cost:
@@ -122,14 +139,14 @@ def gbfs(start, end):
         best_node = open_queue.get()
         next_node = best_node[0]
         prev_node = best_node[1]
-        if not closed_list_contains(next_node, closed_list):
+        if not _closed_list_contains(next_node, closed_list):
             closed_list.append([next_node, prev_node])
         if next_node == end:
-            return make_path(end, closed_list)
+            return _make_path(end, closed_list)
         successors = _graph[next_node]
         for edge in successors:
-            if not closed_list_contains(edge[0], closed_list):
-                h = get_h_cost(edge[0])
+            if not _closed_list_contains(edge[0], closed_list):
+                h = _get_h_cost(edge[0])
                 open_queue.put((h, [edge[0], next_node]))
     return []
 
@@ -141,7 +158,7 @@ def gbfs(start, end):
 # Helper Functions #
 # ---------------- #
 
-def dfs_helper(node, goal, path):
+def _dfs_helper(node, goal, path):
     # if we have reached to end, begin recursive fallback
     if node == goal:
         return [node]
@@ -149,7 +166,7 @@ def dfs_helper(node, goal, path):
         children = _graph[node]
         # Note: child is of the form [node, cost]
         for child in children:
-            path = dfs_helper(child[0], goal, path)
+            path = _dfs_helper(child[0], goal, path)
             # goal was found, so add this node and return path
             if path:
                 return [node] + path
@@ -160,18 +177,18 @@ def dfs_helper(node, goal, path):
 
 
 # Goes in reverse order from the end through the closed list to form the path
-def make_path(end, closed_list):
+def _make_path(end, closed_list):
     print closed_list
     path = [end]
-    next_item = get_next(end, closed_list)
+    next_item = _get_next(end, closed_list)
     while next_item is not None:
         path = [next_item] + path
-        next_item = get_next(next_item, closed_list)
+        next_item = _get_next(next_item, closed_list)
     return path
 
 
 # Grabs the next node from the closed list
-def get_next(node, closed_list):
+def _get_next(node, closed_list):
     for item in closed_list:
         if item[0] == node:
             return item[1]
@@ -179,16 +196,16 @@ def get_next(node, closed_list):
 
 
 # Checks the closed list to see if the passed node is in it
-def closed_list_contains(node, closed_list):
+def _closed_list_contains(node, closed_list):
     for item in closed_list:
         if item[0] == node:
             return True
     return False
 
 
-def get_total_cost(node, closed_list):
+def _get_total_cost(node, closed_list):
     cost = 0
-    prev_node = get_next(node, closed_list)
+    prev_node = _get_next(node, closed_list)
     while prev_node is not None:
         options = _graph[prev_node]
         for opt in options:
@@ -196,16 +213,16 @@ def get_total_cost(node, closed_list):
                 if _have_cost:
                     cost += opt[1]
                 else:
-                    cost += get_distance(prev_node, opt[0])
+                    cost += _get_distance(prev_node, opt[0])
         node = prev_node
-        prev_node = get_next(node)
+        prev_node = _get_next(node)
 
 
-def get_h_cost(node, goal):
-    return get_distance(node, goal)
+def _get_h_cost(node, goal):
+    return _get_distance(node, goal)
 
 
-def get_distance(node1, node2):
+def _get_distance(node1, node2):
     pos1 = _node_pos[node1]
     pos2 = _node_pos[node2]
     return math.sqrt(((pos1[0] - pos2[0]) ** 2) + ((pos1[1] - pos2[1]) ** 2))
@@ -217,6 +234,9 @@ def get_distance(node1, node2):
 
 
 def parse_data(graph_data):
+    '''
+    Parses the string gathered from the file into a graph
+    '''
     global _have_cost
     # tokenize it
     tokens = graph_data.split('\n')
@@ -262,7 +282,7 @@ def parse_data(graph_data):
                 _node_pos[link[0]] = [x, y]
             continue
         # TODO - Figure out a better way to match node(x,y) pattern
-        if matches_format(link[0]):
+        if _matches_format(link[0]):
             temp = re.split(':|\(|\,|\)', link[0])
             if temp[len(temp)-1] == '':
                 temp.pop()
@@ -360,21 +380,24 @@ def parse_data(graph_data):
                     _node_pos[nd] = [x, y]
 
 
-def matches_format(string):
+def _matches_format(string):
     flag = 0
     for i in range(len(string)):
-        if string[i] == '(' and flag == 0:
-            flag = 1
-        elif string[i] == '(' and flag != 0:
-            return False
-        if string[i] == ',' and flag == 1:
-            flag = 2
-        elif string[i] == ',' and flag != 1:
-            return False
-        if string[i] == ')' and flag == 2:
-            return True
-        elif string[i] == ',' and flag != 2:
-            return False
+        if string[i] == '(':
+            if flag == 0:
+                flag = 1
+            else:
+                return False
+        if string[i] == ',':
+            if flag == 1:
+                flag = 2
+            else:
+                return False
+        if string[i] == ')':
+            if flag == 2:
+                return True
+            else:
+                return False
     return False
 
 # ------------- #
