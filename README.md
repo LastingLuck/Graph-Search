@@ -37,7 +37,7 @@ If you want each node to have a position, then <cost/position> is replaced with 
     * Implementing searches. (Currently only dfs, bfs, ucs, gbfs, and a* are planned)
 
 ### Status ###
-Loading Graph - Basic Done. Needs Testing
+Loading Graph - Basic Done. Testing In Progress
 
 DFS - Basic Done. Needs Testing
 
