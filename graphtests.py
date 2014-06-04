@@ -15,7 +15,7 @@ class TestGraph(unittest.TestCase):
 
     def test_graph1(self):
         self.test_graph
-        GraphSearch.load_graph(self.graph_dir + "graph1.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph1.txt")
         self.test_graph['A'] = [['B', 1]]
         self.test_graph['B'] = [['C', 2]]
         self.test_graph['C'] = [['D', 3]]
@@ -23,7 +23,7 @@ class TestGraph(unittest.TestCase):
         # print("Graph1 test passed")
 
     def test_graph2(self):
-        GraphSearch.load_graph(self.graph_dir + "graph2.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph2.txt")
         self.test_graph['A'] = [['B', 1], ['E', 16]]
         self.test_graph['B'] = [['C', 2]]
         self.test_graph['C'] = [['D', 3], ['E', 4]]
@@ -31,7 +31,7 @@ class TestGraph(unittest.TestCase):
         # print("Graph2 test passed")
 
     def test_graph3(self):
-        GraphSearch.load_graph(self.graph_dir + "graph3.txt")
+        GraphSearch.load_from_fileself.graph_dir + "graph3.txt")
         self.test_graph['A'] = [['B', 1]]
         self.test_graph['B'] = [['C', 2]]
         self.test_graph['C'] = [['D', 3], ['E', 4]]
@@ -40,7 +40,7 @@ class TestGraph(unittest.TestCase):
         # print("Graph3 test passed")
 
     def test_graph4(self):
-        GraphSearch.load_graph(self.graph_dir + "graph4.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph4.txt")
         self.test_graph['A'] = [['B', 1], ['E', 16]]
         self.test_graph['B'] = [['A', 1], ['C', 2]]
         self.test_graph['C'] = [['D', 3], ['E', 4]]
@@ -49,7 +49,7 @@ class TestGraph(unittest.TestCase):
         # print("Graph4 test passed")
 
     def test_graph5(self):
-        GraphSearch.load_graph(self.graph_dir + "graph5.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph5.txt")
         self.test_graph['A'] = [['B', 5], ['C', 5], ['D', 6]]
         self.test_graph['B'] = [['E', 5]]
         self.test_graph['C'] = [['E', 6], ['F', 4]]
@@ -67,7 +67,7 @@ class TestGraph(unittest.TestCase):
         # print("Graph5 test passed")
 
     def test_graph6(self):
-        GraphSearch.load_graph(self.graph_dir + "graph6.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph6.txt")
         self.test_graph['A'] = [['B', 1, 1]]
         self.test_graph['B'] = [['C', 2, 2]]
         self.test_graph['C'] = [['D', 3, 3], ['E', 4, 4]]
@@ -75,14 +75,14 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(cmp(self.test_graph, GraphSearch._graph), 0)
 
     def test_graph7(self):
-        GraphSearch.load_graph(self.graph_dir + "graph7.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph7.txt")
         self.test_graph['A'] = [['B', 1, 1], ['E', 4, 1]]
         self.test_graph['B'] = [['C', 2, 3]]
         self.test_graph['C'] = [['D', 3, 4], ['E', 4, 1]]
         self.assertEqual(cmp(self.test_graph, GraphSearch._graph), 0)
 
     def test_graph8(self):
-        GraphSearch.load_graph(self.graph_dir + "graph8.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph8.txt")
         self.test_graph['A'] = [['B', 1, 1], ['E', 4, 1]]
         self.test_graph['B'] = [['C', 2, 3]]
         self.test_graph['C'] = [['D', 3, 4], ['E', 4, 1]]
@@ -94,7 +94,7 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(cmp(self.test_pos, GraphSearch._node_pos), 0)
 
     def test_graph9(self):
-        GraphSearch.load_graph(self.graph_dir + "graph9.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph9.txt")
         self.test_graph['A'] = [['B', 1, 1], ['E', 4, 1]]
         self.test_graph['B'] = [['C', 2, 3]]
         self.test_graph['C'] = [['D', 3, 4], ['E']]
@@ -107,7 +107,7 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(cmp(self.test_graph, GraphSearch._graph), 0)
 
     def test_graph10(self):
-        GraphSearch.load_graph(self.graph_dir + "graph10.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph10.txt")
         self.test_graph['A'] = [['B'], ['E']]
         self.test_graph['B'] = [['C']]
         self.test_graph['C'] = [['D'], ['E']]
@@ -120,7 +120,7 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(cmp(self.test_graph, GraphSearch._graph), 0)
 
     def test_graph11(self):
-        GraphSearch.load_graph(self.graph_dir + "graph11.txt")
+        GraphSearch.load_from_file(self.graph_dir + "graph11.txt")
         self.test_graph['A'] = [['B'], ['E']]
         self.test_graph['B'] = [['C']]
         self.test_graph['C'] = [['D'], ['E']]
@@ -134,7 +134,7 @@ class TestGraph(unittest.TestCase):
 
     def test_graph12(self):
         with self.assertRaises(GraphSearch.NodeParseError):
-            GraphSearch.load_graph(self.graph_dir + "graph12.txt")
+            GraphSearch.load_from_file(self.graph_dir + "graph12.txt")
 
 
 if __name__ == '__main__':

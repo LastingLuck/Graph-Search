@@ -7,9 +7,12 @@
 #       Node2=(a,b)   ==  Node1=(x,y)   ==   Node1(x,y)->Node2(a,b)
 #       Node1->Node2      Node2=(a,b)
 
-# TODO - Implement, gbfs and a_star
-# TODO - test load_graph, dfs, bfs, and usc
-
+# TODO - Implement a_star
+# TODO - test load_graph, dfs, bfs, usc, gbfs
+# TODO - Add a set_graph function that takes a dictionary of a graph
+#        (optional dictionary with node positions) and does a check to see
+#        if it's valid.
+# TODO - Update load_graph to take 1-D and 3-D values
 
 import Queue
 import math
@@ -24,7 +27,17 @@ _node_pos = {}
 _have_cost = -1
 
 
-def load_graph(file_name):
+def load_from_file(file_name):
+    '''
+    Loads a graph from the file specified
+    '''
+    graph = open(file_name)
+    data = graph.read()
+    load_graph(data)
+    graph.close()
+
+
+def load_graph(data_str):
     '''
     Loads a graph from the file specified
     '''
@@ -34,10 +47,14 @@ def load_graph(file_name):
         _node_pos.clear()
     global _have_cost
     _have_cost = -1
-    graph = open(file_name)
-    data = graph.read()
-    parse_data(data)
-    graph.close()
+    _parse_data(data_str)
+
+
+def set_graph(graph, pos=None):
+    global _graph, _node_pos
+    _graph = _valid_graph(graph)
+    if pos is not None:
+        _node_pos = _valid_pos(pos)
 
 
 # ---------------- #
@@ -225,7 +242,10 @@ def _get_h_cost(node, goal):
 def _get_distance(node1, node2):
     pos1 = _node_pos[node1]
     pos2 = _node_pos[node2]
-    return math.sqrt(((pos1[0] - pos2[0]) ** 2) + ((pos1[1] - pos2[1]) ** 2))
+    xdist = pos1[0] - pos2[0]
+    ydist = pos1[1] - pos2[1]
+    zdist = pos1[2] - pos2[2]
+    return math.sqrt((ydist ** 2) + (xdist ** 2) + (zdist ** 2))
 
 
 # ----------- #
@@ -233,7 +253,7 @@ def _get_distance(node1, node2):
 # ----------- #
 
 
-def parse_data(graph_data):
+def _parse_data(graph_data):
     '''
     Parses the string gathered from the file into a graph
     '''
@@ -342,7 +362,7 @@ def parse_data(graph_data):
                 else:
                     _graph[node_con[0]] = [[nd, cost]]
         # Nodes have a position
-        elif len(node_con) == 3:
+        elif len(node_con) >= 3:
             # print tok
             # print node_con
             if _have_cost:
@@ -353,31 +373,39 @@ def parse_data(graph_data):
             try:
                 x = int(node_con[1])
                 y = int(node_con[2])
+                if len(node_con) == 4:
+                    z = int(node_con[3])
+                else:
+                    z = 0
             except ValueError:
                 x = float(node_con[1])
                 y = float(node_con[2])
+                if len(node_con) == 4:
+                    z = float(node_con[3])
+                else:
+                    z = 0
 
             if connection != 0:
                 if nd in _graph:
-                    _graph[nd] += [[node_con[0], x, y]]
+                    _graph[nd] += [[node_con[0], x, y, z]]
                 else:
-                    _graph[nd] = [[node_con[0], x, y]]
+                    _graph[nd] = [[node_con[0], x, y, z]]
                 if (node_con[0] in _node_pos) and \
-                        (_node_pos[node_con[0]] != [x, y]):
+                        (_node_pos[node_con[0]] != [x, y, z]):
                     # print _node_pos[node_con[0]]
                     # print [x, y]
                     raise NodeParseError("Nodes must have only one position")
                 else:
-                    _node_pos[node_con[0]] = [x, y]
+                    _node_pos[node_con[0]] = [x, y, z]
             if connection != 1:
                 if node_con[0] in _graph:
-                    _graph[node_con[0]] += [[nd, x, y]]
+                    _graph[node_con[0]] += [[nd, x, y, z]]
                 else:
-                    _graph[node_con[0]] = [[nd, x, y]]
-                if nd in _node_pos and _node_pos[nd] != [x, y]:
+                    _graph[node_con[0]] = [[nd, x, y, z]]
+                if nd in _node_pos and _node_pos[nd] != [x, y, z]:
                     raise NodeParseError("Nodes must have only one position")
                 else:
-                    _node_pos[nd] = [x, y]
+                    _node_pos[nd] = [x, y, z]
 
 
 def _matches_format(string):
@@ -385,20 +413,80 @@ def _matches_format(string):
     for i in range(len(string)):
         if string[i] == '(':
             if flag == 0:
-                flag = 1
+                flag += 1
             else:
                 return False
         if string[i] == ',':
-            if flag == 1:
-                flag = 2
+            if flag == 1 or flag == 2:
+                flag += 1
             else:
                 return False
         if string[i] == ')':
-            if flag == 2:
+            if flag == 2 or flag == 3:
                 return True
             else:
                 return False
     return False
+
+
+def _valid_graph(graph):
+    try:
+        for node in graph:
+            edges = graph[node]
+            for edge in edges:
+                if not isinstance(edge, list):
+                    raise GraphError("Graph entries are not in a list")
+                if len(edge) > 3:
+                    raise GraphError("Graph entries have too many entries")
+                if len(edge) == 0:
+                    raise GraphError("Graph has empty entries")
+                if not isinstance(edge[1], (int, float, long)):
+                    try:
+                        edge[1] = int(edge[1])
+                    except ValueError:
+                        edge[1] = float(edge[1])
+                    except:
+                        raise GraphError("Graph has non-number values")
+                if not isinstance(edge[2], (int, float, long)):
+                    try:
+                        edge[2] = int(edge[2])
+                    except ValueError:
+                        edge[2] = float(edge[2])
+                    except:
+                        raise GraphError("Graph has non-number values")
+    except KeyError:
+        raise GraphError("General Error in testing graph validity")
+    return graph
+
+
+def _valid_pos(pos):
+    try:
+        for node in pos:
+            loc = pos[node]
+            if not isinstance(loc, list):
+                raise GraphError("Node Position Entries are not in a list")
+            if len(loc) > 3:
+                raise GraphError("Node Position entries have too many entries")
+            if len(loc) < 2:
+                raise GraphError("Node Position entries have too few entries")
+            if not isinstance(loc[0], (int, float, long)):
+                try:
+                    loc[0] = int(loc[0])
+                except ValueError:
+                    loc[0] = float(loc[0])
+                except:
+                    raise GraphError("Node Position has non-number values")
+            if not isinstance(loc[1], (int, float, long)):
+                try:
+                    loc[1] = int(loc[1])
+                except ValueError:
+                    loc[1] = float(loc[1])
+                except:
+                    raise GraphError("Node Position has non-number values")
+    except KeyError:
+        raise GraphError("General Error in testing node position validity")
+    return pos
+
 
 # ------------- #
 # Custom Errors #
