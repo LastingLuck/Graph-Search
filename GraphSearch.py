@@ -9,10 +9,7 @@
 
 # TODO - Implement a_star
 # TODO - test load_graph, dfs, bfs, usc, gbfs
-# TODO - Add a set_graph function that takes a dictionary of a graph
-#        (optional dictionary with node positions) and does a check to see
-#        if it's valid.
-# TODO - Update load_graph to take 1-D and 3-D values
+
 
 import Queue
 import math
