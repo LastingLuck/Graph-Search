@@ -9,7 +9,6 @@
 
 # TODO - Implement a_star
 # TODO - test load_graph, dfs, bfs, usc, gbfs
-# TODO - Trim the graph stuff to allow for spaces in file
 
 # Possible flags:
 #   (for init, searches) Manhatten Distance instead of straight-line distance
@@ -50,6 +49,13 @@ class GraphSearch:
           Node2=(x,y[,z])
           Node1<conn.>Node2
 
+
+    Graph has a 'top-down' priority, i.e., the listing:
+    A->B                                    A
+    A->C    is eqivilent to the graph     / | \
+    A->D                                 B  C  D
+    so left-to-right is the same as up-to-down
+
     Format for the graph (used for set_graph):
         graph = {node: [[conn_node1, cost/pos],[conn_node2, cost/pos],...],...}
             * If the nodes have a position, including them here is optional.
@@ -68,12 +74,19 @@ class GraphSearch:
     def __init__(self, data=None):
         self._graph = {}
         self._node_pos = {}
+        self._close_list = []
         self._have_cost = None
         if data is not None:
             if '\n' in data:
-                self.load_graph(data)
+                self.load_from_string(data)
             else:
                 self.load_from_file(data)
+
+    def load(self, data):
+        if '\n' in data:
+            self.load_from_string(data)
+        else:
+            self.load_from_file(data)
 
     def load_from_file(self, file_name):
         '''
@@ -84,23 +97,21 @@ class GraphSearch:
         self.load_graph(data)
         graph.close()
 
-    def load_graph(self, data_str):
+    def load_from_string(self, data_str):
         '''
         Loads a graph from the string specified
         '''
-        if self._graph:
-            self._graph.clear()
-        if self._node_pos:
-            self._node_pos.clear()
+        self._graph.clear()
+        self._node_pos.clear()
         self._have_cost = None
+        del self._close_list[:]
         self._parse_data(data_str)
 
     def set_graph(self, graph, pos=None):
         '''
         Set function for the graph. Takes in a dictionary containing the nodes
         and a list of the connnected nodes. If nodes have positions, then
-        another dictionary of nodes and their positions is passes in. For more
-        detail see the documentation.
+        another dictionary of nodes and their positions is passes in.
         '''
         self._graph = self._valid_graph(graph)
         if pos is not None:
@@ -112,7 +123,8 @@ class GraphSearch:
 
     def dfs(self, start, end):
         '''
-        Performs a depth-first search on the currently loaded graph.
+        Performs a depth-first search on the currently loaded graph. Goes
+        through the graph in a left-to-right order.
         Caution: Get's stuck in loops very easily
         '''
         if not self._graph:
@@ -121,7 +133,8 @@ class GraphSearch:
 
     def bfs(self, start, end):
         '''
-        Performs a breadth-first search on the currently loaded graph.
+        Performs a breadth-first search on the currently loaded graph. Nodes
+        are discovered in left-to-right order.
         '''
         if not self._graph:
             raise self.GraphError("No graph has been loaded")
@@ -129,26 +142,24 @@ class GraphSearch:
         open_queue = Queue.Queue()
         open_queue.put(start)
         closed_list.append([start, None])
-        prev_node = None
 
         while not open_queue.empty():
+            # print closed_list
             next_node = open_queue.get()
             if next_node == end:
-                print "Node"
-                print closed_list
-                closed_list.append([next_node, prev_node])
+                # print "Node"
+                # print closed_list
                 return self._make_path(end, closed_list)
             edges = self._graph[next_node]
             for edge in edges:
                 if edge[0] == end:
-                    print "Edge"
-                    print closed_list
+                    # print "Edge"
+                    # print closed_list
                     closed_list.append([edge[0], next_node])
                     return self._make_path(end, closed_list)
                 if not self._closed_list_contains(edge[0], closed_list):
                     closed_list.append([edge[0], next_node])
                     open_queue.put(edge[0])
-            prev_node = next_node
         # No path found. Return empty list
         return []
 
@@ -244,7 +255,7 @@ class GraphSearch:
         Makes a path from the end node to the start by going through the
         closed list in reverse order
         '''
-        print closed_list
+        self._close_list = closed_list
         path = [end]
         next_item = self._get_next(end, closed_list)
         while next_item is not None:
@@ -346,8 +357,8 @@ class GraphSearch:
                     pos.pop()
                 if pos[0] == '':
                     pos.pop(0)
-                pos[0] = pos[0].trim()
-                pos[1] = pos[1].trim()
+                pos[0] = pos[0].strip()
+                pos[1] = pos[1].strip()
                 # Attempt to convert the string to numbers. First attempt
                 # int, then float.
                 try:
@@ -363,7 +374,7 @@ class GraphSearch:
                                                   " cost/pos")
                 # Check if the node is already in the position dict and if so,
                 # check if the current value is different this assignment.
-                link[0] = link[0].trim()
+                link[0] = link[0].strip()
                 if (link[0] in self._node_pos) and \
                         (self._node_pos[link[0]] != [x, y]):
                     raise self.NodeParseError("Nodes must have only one"
@@ -379,9 +390,9 @@ class GraphSearch:
                 temp = re.split(':|\(|\,|\)', link[0])
                 if temp[len(temp)-1] == '':
                     temp.pop()
-                link[0] = temp[0].trim()
-                temp[1] = temp[1].trim()
-                temp[2] = temp[2].trim()
+                link[0] = temp[0].strip()
+                temp[1] = temp[1].strip()
+                temp[2] = temp[2].strip()
                 # Attempt to convert to numbers
                 try:
                     x = int(temp[1])
@@ -404,7 +415,7 @@ class GraphSearch:
             nd = link[0]
             # Split the right side
             node_con = re.split(':|\(|\,|\)', link[1])
-            node_con[0] = node_con[0].trim()
+            node_con[0] = node_con[0].strip()
             if node_con[len(node_con)-1] == '':
                 node_con.pop()
             # Check if there is no node cost or position (node1<conn.>node2)
@@ -430,7 +441,7 @@ class GraphSearch:
                         self._graph[node_con[0]] = [[nd]]
             # Check if nodes have a cost
             if len(node_con) == 2:
-                node_con[1] = node_con[1].trim()
+                node_con[1] = node_con[1].strip()
                 # Assign flag. True-Nodes have cost. False-Nodes have position
                 if self._have_cost is None:
                     self._have_cost = True
@@ -464,8 +475,8 @@ class GraphSearch:
                         self._graph[node_con[0]] = [[nd, cost]]
             # Nodes have a position
             elif len(node_con) >= 3:
-                node_con[1] = node_con[1].trim()
-                node_con[2] = node_con[2].trim()
+                node_con[1] = node_con[1].strip()
+                node_con[2] = node_con[2].strip()
                 # If len > 4 then there's too many entries. Only first 3 count,
                 # the rest are ignored
                 # Set flags. True-Nodes have cost. False-Nodes have position
@@ -479,7 +490,7 @@ class GraphSearch:
                     x = int(node_con[1])
                     y = int(node_con[2])
                     if len(node_con) == 4:
-                        z = int(node_con[3].trim())
+                        z = int(node_con[3].strip())
                     else:
                         z = 0
                 except ValueError:
@@ -487,7 +498,7 @@ class GraphSearch:
                         x = float(node_con[1])
                         y = float(node_con[2])
                         if len(node_con) == 4:
-                            z = float(node_con[3].trim())
+                            z = float(node_con[3].strip())
                         else:
                             z = 0
                     except ValueError:
