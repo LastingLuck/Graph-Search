@@ -9,6 +9,7 @@
 
 # TODO - Implement a_star
 # TODO - test load_graph, dfs, bfs, usc, gbfs
+# TODO - User passed in function used to calculate cost (imp. needs testing)
 
 # Possible flags:
 #   (for init, searches) Manhatten Distance instead of straight-line distance
@@ -18,14 +19,6 @@
 import Queue
 import math
 import re
-
-# Dictionary containing a node as a key and a list of [node, cost] as the value
-# If nodes have a position the graph will contain [node, x, y] or [node]
-# _graph = {}
-# Dictionary containing a node and its position
-# _node_pos = {}
-# Flag for the type of nodes (has cost/has position)
-# _have_cost = -1
 
 
 class GraphSearch:
@@ -76,6 +69,7 @@ class GraphSearch:
         self._node_pos = {}
         self._close_list = []
         self._have_cost = None
+        self._cost_func = None
         if data is not None:
             if '\n' in data:
                 self.load_from_string(data)
@@ -94,8 +88,8 @@ class GraphSearch:
         '''
         graph = open(file_name)
         data = graph.read()
-        self.load_graph(data)
         graph.close()
+        self.load_from_string(data)
 
     def load_from_string(self, data_str):
         '''
@@ -116,6 +110,14 @@ class GraphSearch:
         self._graph = self._valid_graph(graph)
         if pos is not None:
             self._node_pos = self._valid_pos(pos)
+
+    def set_cost_func(self, function=None):
+        '''
+        Sets the cost function used to calculate both the actual cost and the
+        heuristic cost. To reset it back to default call this function again
+        with no arguments or with None argument.
+        '''
+        self._cost_func = function
 
 # ---------------- #
 # Search Functions #
@@ -173,12 +175,10 @@ class GraphSearch:
         open_queue = Queue.PriorityQueue()
         open_queue.put((0, start))
         closed_list.append([start, None])
-        prev_node = None
 
         while not open_queue.empty():
             next_node = open_queue.get()
             if next_node[1] == end:
-                closed_list.append([next_node, prev_node])
                 return self._make_path(end, closed_list)
             edges = self._graph[next_node]
             for edge in edges:
@@ -189,13 +189,12 @@ class GraphSearch:
                     closed_list.append([edge[0], next_node])
                     total_cost = self._get_total_cost(edge[0], closed_list)
                     open_queue.put((total_cost, edge[0]))
-            prev_node = next_node
         return []
 
     def gbfs(self, start, end):
         '''
         Performs a greedy best first search on the currently loaded graph.
-        The straight-line distance is used for the heuristic value.
+        The straight-line distance is used for the default heuristic value.
         Loaded graph must have positions associated with the nodes and not cost
         '''
         if not self._graph:
@@ -224,7 +223,37 @@ class GraphSearch:
                     open_queue.put((h, [edge[0], next_node]))
         return []
 
-    # def a_star(start, end):
+    def a_star(self, start, end):
+        '''
+        Performs an A* search on the currently loaded graph.
+        The straight-line distance is used for the default heuristic value.
+        Loaded graph must have positions associated with the nodes and not cost
+        '''
+        if not self._graph:
+            raise self.GraphError("No graph has been loaded")
+        if self._have_cost:
+            raise self.SearchError("Nodes must have positions instead of cost")
+        closed_list = []
+        open_queue = Queue.PriorityQueue()
+        open_queue.put((0, [start, None]))
+        closed_list.append([start, None])
+        prev_node = None
+
+        while not open_queue.empty():
+            best_node = open_queue.get()
+            next_node = best_node[0]
+            prev_node = best_node[1]
+            if not self._closed_list_contains(next_node, closed_list):
+                closed_list.append([next_node, prev_node])
+            if next_node == end:
+                return self._make_path(end, closed_list)
+            successors = self._graph[next_node]
+            for edge in successors:
+                if not self._closed_list_contains(edge[0], closed_list):
+                    h = self._get_h_cost(edge[0]) + \
+                        self._get_total_cost(edge[0], closed_list)
+                    open_queue.put((h, [edge[0], next_node]))
+        return []
 
 # ---------------- #
 # Helper Functions #
@@ -283,6 +312,9 @@ class GraphSearch:
         Does not account for the heuristic value.
         '''
         cost = 0
+        use_default = 1
+        if self._cost_func is not None:
+            use_default = 0
         prev_node = self._get_next(node, closed_list)
         while prev_node is not None:
             options = self._graph[prev_node]
@@ -291,7 +323,10 @@ class GraphSearch:
                     if self._have_cost:
                         cost += opt[1]
                     else:
-                        cost += self._get_distance(prev_node, opt[0])
+                        if use_default:
+                            cost += self._get_distance(prev_node, opt[0])
+                        else:
+                            cost += self._cost_func(prev_node, opt[0])
             node = prev_node
             prev_node = self._get_next(node)
 
@@ -300,6 +335,8 @@ class GraphSearch:
         Returns the heuristic value of a node. This is currently the
         straight line distance between there and the end.
         '''
+        if self._cost_func is not None:
+            return self._cost_func(node, goal)
         return self._get_distance(node, goal)
 
     def _get_distance(self, node1, node2):
@@ -571,7 +608,8 @@ class GraphSearch:
                                               "entries")
                     if len(edge) == 0:
                         raise self.GraphError("Graph has empty entries")
-                    if not isinstance(edge[1], (int, float, long)):
+                    if len(edge) > 1 and \
+                            not isinstance(edge[1], (int, float, long)):
                         try:
                             edge[1] = int(edge[1])
                         except ValueError:
@@ -579,7 +617,8 @@ class GraphSearch:
                         except:
                             raise self.GraphError("Graph has non-number"
                                                   " values")
-                    if not isinstance(edge[2], (int, float, long)):
+                    if len(edge) == 3 and \
+                            not isinstance(edge[2], (int, float, long)):
                         try:
                             edge[2] = int(edge[2])
                         except ValueError:
@@ -663,3 +702,17 @@ class GraphSearch:
 
         def __str__(self):
             return repr(self.value)
+
+# -------------- #
+# Main Profiling #
+# -------------- #
+if __name__ == '__main__':
+    import profile
+    import treegen
+    tree = treegen.get_graph(16, 5)
+    # print tree
+    gs = GraphSearch()
+    gs._graph = tree
+    # print gs._graph
+    print "DFS Profile"
+    profile.run("gs.dfs('A', 'APPPPP')")
